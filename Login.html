@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inventario Montilla</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f8f8f8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .login-container {
+      background-color: #ffffff;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      width: 100%;
+      max-width: 360px;
+      text-align: center;
+    }
+    .logo {
+      width: 140px;
+      height: auto;
+      margin: 0 auto 1rem auto;
+      display: block;
+    }
+    .login-container h2 {
+      margin-bottom: 1.5rem;
+    }
+    .login-container input {
+      width: 100%;
+      padding: 0.6rem;
+      margin: 0.5rem 0;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      text-align: center;
+      box-sizing: border-box;
+    }
+    .password-wrapper {
+      position: relative;
+      width: 100%;
+      margin: 0.5rem 0;
+    }
+    .password-wrapper input {
+      width: 100%;
+      padding-right: 40px;
+      box-sizing: border-box;
+    }
+    .toggle-password {
+      position: absolute;
+      top: 50%;
+      right: 10px;
+      transform: translateY(-50%);
+      cursor: pointer;
+      font-size: 18px;
+      color: #000;
+    }
+    .login-container button {
+      width: 100%;
+      padding: 0.6rem;
+      background-color: #d32f2f;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      margin-top: 1rem;
+      cursor: pointer;
+    }
+    .login-container button:hover {
+      background-color: #b71c1c;
+    }
+    .error {
+      color: red;
+      margin-top: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <img src="logo.png" alt="Logo Montilla" class="logo">
+    <h2>Inventario Montilla</h2>
+    <input type="text" id="usuario" placeholder="Usuario">
+    <div class="password-wrapper">
+      <input type="password" id="clave" placeholder="Contraseña">
+      <span class="toggle-password" onclick="togglePassword()">👁</span>
+    </div>
+    <button onclick="iniciarSesion()">Entrar</button>
+    <div class="error" id="mensaje"></div>
+  </div>
+
+  <script>
+    const scriptURL = "https://script.google.com/macros/s/AKfycbwCket6uwOyT6McMmoUw7zsQ0lEVIvc-CgBI24HD2ZK5ZcVKXaiDdPxXqh9HRMS6RKF/exec";
+
+    async function iniciarSesion() {
+      const usuario = document.getElementById("usuario").value;
+      const clave = document.getElementById("clave").value;
+      const mensaje = document.getElementById("mensaje");
+
+      if (!usuario || !clave) {
+        mensaje.textContent = "Ingresa usuario y contraseña.";
+        return;
+      }
+
+      try {
+        const res = await fetch(`${scriptURL}?login=1&usuario=${usuario}&clave=${clave}`);
+        const data = await res.json();
+
+        if (data.success) {
+          sessionStorage.setItem("usuario", usuario);
+          sessionStorage.setItem("zona", data.zona);
+          window.location.href = "index.html";
+        } else {
+          mensaje.textContent = "Usuario o contraseña incorrectos.";
+        }
+      } catch (error) {
+        mensaje.textContent = "Error de conexión con el servidor.";
+        console.error(error);
+      }
+    }
+
+    function togglePassword() {
+      const passwordInput = document.getElementById("clave");
+      passwordInput.type = passwordInput.type === "password" ? "text" : "password";
+    }
+  </script>
+</body>
+</html>
+
+
+

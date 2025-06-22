@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inventario Montilla</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #ffffff;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .container {
+      width: 100%;
+      max-width: 400px;
+      background: #eeeeee;
+      padding: 1.5rem;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      text-align: center;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    label {
+      font-weight: bold;
+      display: block;
+      margin-top: 0.75rem;
+      text-align: center;
+    }
+    input, select {
+      width: 80%;
+      padding: 0.5rem;
+      margin-top: 0.3rem;
+      border: 1px solid #999;
+      border-radius: 8px;
+      text-align: center;
+      margin-left: auto;
+      margin-right: auto;
+      display: block;
+    }
+    button {
+      width: 80%;
+      padding: 0.5rem;
+      margin-top: 1rem;
+      background-color: #d32f2f;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #b71c1c;
+    }
+    .mensaje {
+      margin-top: 1rem;
+      text-align: center;
+      word-wrap: break-word;
+      white-space: pre-wrap;
+    }
+    .success {
+      color: green;
+      animation: vibrar 0.2s linear 3;
+    }
+    .error {
+      color: red;
+    }
+    @keyframes vibrar {
+      0% { transform: translateX(0); }
+      25% { transform: translateX(-3px); }
+      50% { transform: translateX(3px); }
+      75% { transform: translateX(-3px); }
+      100% { transform: translateX(0); }
+    }
+    #preview {
+      margin-top: 1rem;
+      padding: 0.75rem;
+      background: #fff;
+      border-radius: 8px;
+      border: 1px dashed #ccc;
+      font-size: 0.9rem;
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
+      width: 80%;
+      height: auto;
+    }
+    .info-qr {
+      margin-top: 0.5rem;
+      font-size: 0.9rem;
+      color: #555;
+      word-wrap: break-word;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Escaneo e Inventario</h2>
+    <video id="preview" autoplay muted playsinline></video>
+    <div class="info-qr">Escanea una etiqueta con formato: <strong>Zona/...</strong></div>
+
+    <form id="formulario">
+      <label for="descripcion">Descripción</label>
+      <select id="descripcion">
+        <option value="">Cargando...</option>
+      </select>
+
+      <label for="codigo">Código</label>
+      <input type="text" id="codigo" placeholder="Automático" readonly>
+
+      <label for="cantidad">Cantidad</label>
+      <input type="number" id="cantidad" min="1">
+
+      <label for="peralte">Peralte</label>
+      <input type="text" id="peralte">
+
+      <label for="longitud">Longitud</label>
+      <input type="text" id="longitud">
+
+      <label for="calibre">Calibre</label>
+      <input type="text" id="calibre">
+
+      <div class="mensaje" id="mensaje"></div>
+      <button type="submit">Guardar</button>
+    </form>
+  </div>
+
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <script>
+    const scriptURL = "https://script.google.com/macros/s/AKfycbwCket6uwOyT6McMmoUw7zsQ0lEVIvc-CgBI24HD2ZK5ZcVKXaiDdPxXqh9HRMS6RKF/exec";
+
+    let zonaLeida = "";
+    let usuario = sessionStorage.getItem("usuario") || "";
+    let zonaPermitida = sessionStorage.getItem("zona") || "";
+
+    const descripcion = document.getElementById("descripcion");
+    const codigo = document.getElementById("codigo");
+    const mensaje = document.getElementById("mensaje");
+
+    function normalizar(texto) {
+      return texto.trim().toLowerCase().replace(/\s+/g, " ");
+    }
+
+    async function cargarProductos() {
+      try {
+        const res = await fetch(scriptURL + "?productos=1");
+        const productos = await res.json();
+
+        descripcion.innerHTML = '<option value="">Selecciona</option>';
+        productos.forEach(item => {
+          const option = document.createElement("option");
+          option.value = item.descripcion;
+          option.textContent = item.descripcion;
+          option.dataset.codigo = item.codigo;
+          descripcion.appendChild(option);
+        });
+
+        descripcion.addEventListener("change", () => {
+          const selected = descripcion.selectedOptions[0];
+          codigo.value = selected.dataset.codigo || "";
+        });
+      } catch (err) {
+        console.error("Error al cargar productos:", err);
+      }
+    }
+
+    new Html5Qrcode("preview").start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: 200 },
+      qrCodeMessage => {
+        try {
+          const partes = qrCodeMessage.split("/");
+          zonaLeida = normalizar(partes[0]);
+          if (zonaLeida !== normalizar(zonaPermitida)) {
+            mensaje.textContent = `No pertenece a área asignada (${partes[0]})`;
+            mensaje.className = "mensaje error";
+          } else {
+            mensaje.textContent = `Zona válida: ${partes[0]}`;
+            mensaje.className = "mensaje success";
+          }
+        } catch (err) {
+          console.error("Error al leer QR:", err);
+        }
+      },
+      error => {}
+    );
+
+    document.getElementById("formulario").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      mensaje.textContent = "";
+
+      if (!confirm("¿Estás listo para guardarlo?")) return;
+
+      const data = {
+        usuario,
+        zona: zonaLeida,
+        descripcion: descripcion.value,
+        codigo: codigo.value,
+        cantidad: document.getElementById("cantidad").value,
+        peralte: document.getElementById("peralte").value,
+        longitud: document.getElementById("longitud").value,
+        calibre: document.getElementById("calibre").value
+      };
+
+      if (!data.descripcion || !data.codigo || !data.cantidad || !data.peralte || !data.longitud || !data.calibre || zonaLeida !== normalizar(zonaPermitida)) {
+        mensaje.textContent = "Campos incompletos o zona inválida";
+        mensaje.className = "mensaje error";
+        return;
+      }
+
+      try {
+        const res = await fetch(scriptURL, {
+          method: "POST",
+          body: JSON.stringify(data)
+        });
+        const result = await res.json();
+        if (result.success) {
+          mensaje.textContent = "Registro guardado correctamente.";
+          mensaje.className = "mensaje success";
+          document.getElementById("formulario").reset();
+          codigo.value = "";
+        } else {
+          mensaje.textContent = "Error al guardar.";
+          mensaje.className = "mensaje error";
+        }
+      } catch (err) {
+        mensaje.textContent = "Error de conexión.";
+        mensaje.className = "mensaje error";
+        console.error(err);
+      }
+    });
+
+    window.onload = cargarProductos;
+  </script>
+</body>
+</html>
